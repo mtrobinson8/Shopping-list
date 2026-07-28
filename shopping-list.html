@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Shopping List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F3F5EE;
+    --paper: #FFFFFF;
+    --ink: #1E2A1E;
+    --muted: #75806E;
+    --forest: #2F5233;
+    --forest-light: #E5EDE2;
+    --mustard: #D9A441;
+    --mustard-light: #FBF0DA;
+    --mustard-deep: #8A6318;
+    --line: #DDE3D3;
+    --done-bg: #F0F1EA;
+    --radius: 14px;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Public Sans', sans-serif;
+    padding-bottom: 60px;
+    min-height: 100vh;
+  }
+  .wrap{
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+  }
+
+  /* Header / receipt strip */
+  header{
+    background: var(--forest);
+    color: #fff;
+    border-radius: var(--radius);
+    padding: 20px 20px 18px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:0;
+    height:10px;
+    background:
+      radial-gradient(circle at 8px 0, transparent 6px, var(--forest) 6px) repeat-x;
+    background-size: 16px 10px;
+    transform: translateY(50%);
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: 26px;
+    margin:0 0 2px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle{
+    font-size: 13px;
+    opacity: 0.75;
+    margin-bottom: 16px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .progress-row{
+    display:flex; align-items:center; gap:12px;
+  }
+  .progress-track{
+    flex:1;
+    height: 8px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    background: var(--mustard);
+    border-radius: 20px;
+    transition: width 0.25s ease;
+    width:0%;
+  }
+  .progress-count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Tabs */
+  .tabs{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    padding: 4px 2px 14px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar{ display:none; }
+  .tab{
+    flex: 0 0 auto;
+    padding: 9px 16px;
+    border-radius: 100px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .tab.active{
+    background: var(--forest);
+    border-color: var(--forest);
+    color: #fff;
+  }
+  .tab.mylist{
+    border-color: var(--mustard);
+    color: var(--mustard-deep);
+  }
+  .tab.mylist.active{
+    background: var(--mustard);
+    border-color: var(--mustard);
+    color: #fff;
+  }
+  .tab .tab-count{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight: 500;
+    opacity: 0.7;
+    margin-left: 4px;
+  }
+
+  .tab-divider{
+    flex: 0 0 auto;
+    width: 1px;
+    background: var(--line);
+    margin: 6px 4px;
+  }
+
+  /* Sections */
+  .store-block{ display:none; }
+  .store-block.active{ display:block; }
+
+  .aisle-group{
+    margin-bottom: 18px;
+  }
+  .aisle-label{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    margin: 0 2px 8px;
+  }
+  .aisle-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight:600;
+    background: var(--mustard-light);
+    color: var(--mustard-deep);
+    padding: 3px 9px;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+  }
+  .aisle-name{
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .store-heading{
+    font-family:'Fraunces', serif;
+    font-size: 15px;
+    font-weight:600;
+    color: var(--forest);
+    margin: 22px 2px 8px;
+  }
+  .store-heading:first-child{ margin-top: 0; }
+
+  ul.items{
+    list-style:none;
+    margin:0;
+    padding:0;
+    background: var(--paper);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    overflow:hidden;
+  }
+  li.item{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    user-select:none;
+    transition: background 0.15s ease;
+  }
+  li.item:last-child{ border-bottom:none; }
+  li.item:active{ background: var(--forest-light); }
+  li.item.done{ background: var(--done-bg); }
+  li.item.planned{ background: var(--mustard-light); }
+
+  /* Checkbox style (used in My List, for "bought") */
+  .checkbox{
+    flex: 0 0 auto;
+    width: 22px; height: 22px;
+    border-radius: 7px;
+    border: 2px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    transition: all 0.15s ease;
+  }
+  li.item.done .checkbox{
+    background: var(--forest);
+    border-color: var(--forest);
+  }
+  .checkbox svg{
+    width: 13px; height:13px;
+    opacity:0;
+    transform: scale(0.5);
+    transition: all 0.15s ease;
+  }
+  li.item.done .checkbox svg{ opacity:1; transform: scale(1); }
+
+  /* Add toggle style (used in browse tabs, for "planned") */
+  .add-toggle{
+    flex: 0 0 auto;
+    width: 24px; height: 24px;
+    border-radius: 100px;
+    border: 2px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 15px;
+    color: var(--muted);
+    transition: all 0.15s ease;
+    font-weight: 700;
+  }
+  li.item.planned .add-toggle{
+    background: var(--mustard);
+    border-color: var(--mustard);
+    color: #fff;
+  }
+
+  .item-label{
+    font-size: 15.5px;
+    font-weight: 500;
+    color: var(--ink);
+    transition: all 0.15s ease;
+    flex: 1;
+  }
+  li.item.done .item-label{
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--muted);
+  }
+
+  .remove-x{
+    flex: 0 0 auto;
+    width: 26px; height: 26px;
+    border-radius: 100px;
+    display:flex; align-items:center; justify-content:center;
+    color: var(--muted);
+    font-size: 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
+  .remove-x:active{ background: var(--line); }
+
+  .browse-hint{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    background: var(--forest-light);
+    color: var(--forest);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 12px 14px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+
+  .store-footer{
+    display:flex;
+    justify-content: flex-end;
+    margin-top: 6px;
+  }
+  .reset-btn{
+    font-family:'Public Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--forest);
+    background: var(--forest-light);
+    border: none;
+    padding: 9px 14px;
+    border-radius: 100px;
+    cursor: pointer;
+  }
+  .reset-btn:active{ opacity: 0.7; }
+
+  .mylist-header{
+    display:flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .clear-list-btn{
+    font-size: 13px;
+    font-weight: 600;
+    color: #A8452F;
+    background: #FBEAE5;
+    border: none;
+    padding: 8px 13px;
+    border-radius: 100px;
+    cursor: pointer;
+  }
+  .clear-list-btn:active{ opacity: 0.7; }
+
+  /* Recipes tab */
+  .recipe-card{
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 18px 16px;
+    margin-bottom: 16px;
+  }
+  .recipe-card h2{
+    font-family:'Fraunces', serif;
+    font-size: 20px;
+    margin: 0 0 3px;
+  }
+  .recipe-meta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .recipe-ingredients{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 14px;
+  }
+  .ing-pill{
+    font-size: 13px;
+    padding: 6px 11px;
+    background: var(--forest-light);
+    color: var(--forest);
+    border-radius: 100px;
+    font-weight: 500;
+  }
+  .ing-pill.on-list{
+    background: var(--mustard);
+    color: #fff;
+  }
+  .add-all-btn{
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--mustard);
+    border: none;
+    padding: 10px 16px;
+    border-radius: 100px;
+    cursor: pointer;
+  }
+  .add-all-btn:active{ opacity: 0.8; }
+  .add-all-btn.added{
+    background: var(--forest-light);
+    color: var(--forest);
+  }
+
+  .global-footer{
+    text-align:center;
+    margin-top: 24px;
+  }
+  .reset-all{
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 100px;
+    cursor:pointer;
+  }
+  .reset-all:active{ opacity:0.6; }
+
+  .empty-msg{
+    text-align:center;
+    padding: 50px 20px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .empty-msg strong{ color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Grocery Run</h1>
+    <div class="subtitle" id="today-label"></div>
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-count" id="progress-count">0/0</div>
+    </div>
+  </header>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div id="stores"></div>
+
+  <div class="global-footer">
+    <button class="reset-all" id="reset-all">Clear everything &amp; start over</button>
+  </div>
+
+</div>
+
+<script>
+// ---------- DATA ----------
+const stores = [
+  {
+    key: "tesco",
+    name: "Tesco",
+    aisles: [
+      { label: "Aisle 1", items: ["Berries","Rosemary","Thyme","Garlic","Red peppers","Celery","Bananas","Avocados","Steak","Chicken thighs","Mince","Diced beef","Pork"] },
+      { label: "Aisle 2", items: ["Beef ribs","Roast chicken breasts","Bacon","Apples","Melon","Kiwis","Pineapple","Courgette","Potato","Lemons","Onion"] },
+      { label: "Aisle 3", items: ["Carrots","Pizza"] },
+      { label: "Aisle 4", items: ["Mozzarella","Sour cream","Halloumi","Milk","Butter","Beef dripping","Coconut water","Yoghurt","Kefir"] },
+      { label: "Aisle 5", items: ["Chilola hot sauce","Jalapeños","Olives","Chicken stock","Beef stock","Bay leaves","Ginger","Paprika","Cinnamon","Caraway seeds","Marjoram","Cardamom","Turmeric","Tomato passata","Tomato paste","Rice","Olive oil","White vinegar","Honey"] },
+      { label: "Aisle 6", items: ["Coconut oil","Sauerkraut","Gum"] },
+      { label: "Aisle 7", items: ["Flour","Bicarbonate of soda","Eggs"] },
+      { label: "Aisle 8", items: ["Dark chocolate","Hibiscus tea","Teabags"] },
+      { label: "Aisle 9", items: ["Water"] },
+      { label: "Aisle 10", items: ["Champagne"] },
+      { label: "Aisle 11", items: ["Vanish powder","Vanish spray/stick","Washing tablets","Fabric conditioner","Rinse aid","Washing up liquid","Dishwasher tabs","Dishwasher salt","Febreeze","Toilet cleaner","Toilet blue"] },
+      { label: "Aisle 12", items: ["Bin bags","Frozen blueberries","Ice cream"] },
+      { label: "Aisle 13", items: ["Tissues","Loo roll","Kitchen roll"] },
+      { label: "Aisle 14", items: ["Mouthwash"] }
+    ]
+  },
+  {
+    key: "sainsburys",
+    name: "Sainsbury's",
+    aisles: [
+      { label: null, items: ["Roast beef slices","Frozen blueberries","Water"] }
+    ]
+  },
+  {
+    key: "gails",
+    name: "Gail's",
+    aisles: [
+      { label: null, items: ["Sourdough bread"] }
+    ]
+  },
+  {
+    key: "market",
+    name: "Farmers Market",
+    aisles: [
+      { label: null, items: ["Raw milk","Raw kefir"] }
+    ]
+  }
+];
+
+const recipes = [
+  {
+    name: "Goulash",
+    tag: "Slow cooker",
+    ingredients: ["Red peppers","Garlic","Diced beef","Potato","Onion","Carrots","Sour cream","Caraway seeds","Paprika","Beef stock","Salt","Pepper","Bay leaves","Marjoram","Tomato passata","Tomato paste"]
+  },
+  {
+    name: "Chicken thigh stew",
+    tag: "Slow cooker",
+    ingredients: ["Garlic","Rosemary","Thyme","Celery","Chicken thighs","Onion","Carrot","Chicken stock","Salt","Pepper","Turmeric"]
+  }
+];
+
+// Build a lookup: lowercase item name -> { storeKey, item (original casing) }
+// Used so recipe ingredients can be matched back to their real store/aisle entry.
+const itemIndex = {};
+stores.forEach(s => {
+  s.aisles.forEach(a => {
+    a.items.forEach(item => {
+      itemIndex[item.toLowerCase()] = { storeKey: s.key, item };
+    });
+  });
+});
+
+// ---------- STATE ----------
+// planned: Set of "storeKey::item" for items chosen for this trip (from master list)
+// plannedExtras: Set of item names not found in the master list (e.g. Salt, Pepper from a recipe)
+// bought: Set of same-format keys, for items ticked off while shopping
+const planned = new Set();
+const plannedExtras = new Set();
+const bought = new Set();
+const boughtExtras = new Set();
+
+let activeTab = "mylist";
+
+// ---------- HELPERS ----------
+const checkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
+function key(storeKey, item){ return storeKey + "::" + item; }
+
+function plannedTotalCount(){ return planned.size + plannedExtras.size; }
+function boughtTotalCount(){ return bought.size + boughtExtras.size; }
+
+// ---------- RENDER: TABS ----------
+function renderTabs(){
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.innerHTML = '';
+
+  const myListBtn = document.createElement('button');
+  myListBtn.className = 'tab mylist' + (activeTab === 'mylist' ? ' active' : '');
+  myListBtn.innerHTML = `My List <span class="tab-count">${boughtTotalCount()}/${plannedTotalCount()}</span>`;
+  myListBtn.onclick = () => { activeTab = 'mylist'; render(); };
+  tabsEl.appendChild(myListBtn);
+
+  const divider = document.createElement('div');
+  divider.className = 'tab-divider';
+  tabsEl.appendChild(divider);
+
+  stores.forEach(s => {
+    const plannedInStore = [...planned].filter(k => k.startsWith(s.key + "::")).length;
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (activeTab === s.key ? ' active' : '');
+    btn.innerHTML = `${s.name}` + (plannedInStore ? ` <span class="tab-count">${plannedInStore}</span>` : '');
+    btn.onclick = () => { activeTab = s.key; render(); };
+    tabsEl.appendChild(btn);
+  });
+
+  const recipeBtn = document.createElement('button');
+  recipeBtn.className = 'tab' + (activeTab === 'recipes' ? ' active' : '');
+  recipeBtn.textContent = 'Recipes';
+  recipeBtn.onclick = () => { activeTab = 'recipes'; render(); };
+  tabsEl.appendChild(recipeBtn);
+}
+
+// ---------- RENDER: BROWSE (select items to add to the list) ----------
+function renderBrowseStore(store){
+  const block = document.createElement('div');
+  block.className = 'store-block active';
+
+  const hint = document.createElement('div');
+  hint.className = 'browse-hint';
+  hint.textContent = `Tap anything you need this run to add it to My List.`;
+  block.appendChild(hint);
+
+  store.aisles.forEach(aisle => {
+    const group = document.createElement('div');
+    group.className = 'aisle-group';
+
+    if (aisle.label) {
+      const labelRow = document.createElement('div');
+      labelRow.className = 'aisle-label';
+      labelRow.innerHTML = `<span class="aisle-badge">${aisle.label.replace('Aisle ','A')}</span><span class="aisle-name">${aisle.label}</span>`;
+      group.appendChild(labelRow);
+    }
+
+    const ul = document.createElement('ul');
+    ul.className = 'items';
+    aisle.items.forEach(item => {
+      const k = key(store.key, item);
+      const isPlanned = planned.has(k);
+      const li = document.createElement('li');
+      li.className = 'item' + (isPlanned ? ' planned' : '');
+      li.innerHTML = `<span class="add-toggle">+</span><span class="item-label">${item}</span>`;
+      li.onclick = () => {
+        if (planned.has(k)) { planned.delete(k); bought.delete(k); }
+        else planned.add(k);
+        render();
+      };
+      ul.appendChild(li);
+    });
+    group.appendChild(ul);
+    block.appendChild(group);
+  });
+
+  return block;
+}
+
+// ---------- RENDER: MY LIST (tick off while shopping) ----------
+function renderMyList(){
+  const block = document.createElement('div');
+  block.className = 'store-block active';
+
+  if (plannedTotalCount() === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-msg';
+    empty.innerHTML = `<strong>Your list is empty.</strong><br>Go through Tesco, Sainsbury's, Gail's and the Farmers Market tabs and tap anything you're low on — it'll land here in shopping order, ready to tick off.`;
+    block.appendChild(empty);
+    return block;
+  }
+
+  const headerRow = document.createElement('div');
+  headerRow.className = 'mylist-header';
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'clear-list-btn';
+  clearBtn.textContent = 'Clear list';
+  clearBtn.onclick = () => {
+    planned.clear(); plannedExtras.clear(); bought.clear(); boughtExtras.clear();
+    render();
+  };
+  headerRow.appendChild(document.createElement('span'));
+  headerRow.appendChild(clearBtn);
+  block.appendChild(headerRow);
+
+  stores.forEach(store => {
+    const storeItems = [];
+    store.aisles.forEach(aisle => {
+      aisle.items.forEach(item => {
+        const k = key(store.key, item);
+        if (planned.has(k)) storeItems.push({ item, k, aisleLabel: aisle.label });
+      });
+    });
+    if (storeItems.length === 0) return;
+
+    const heading = document.createElement('div');
+    heading.className = 'store-heading';
+    heading.textContent = store.name;
+    block.appendChild(heading);
+
+    const ul = document.createElement('ul');
+    ul.className = 'items';
+    storeItems.forEach(({ item, k, aisleLabel }) => {
+      const isDone = bought.has(k);
+      const li = document.createElement('li');
+      li.className = 'item' + (isDone ? ' done' : '');
+      const aisleTag = aisleLabel ? `<span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-left:6px;">${aisleLabel.replace('Aisle ','A')}</span>` : '';
+      li.innerHTML = `<span class="checkbox">${checkSvg}</span><span class="item-label">${item}${aisleTag}</span>`;
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-x';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.onclick = (e) => {
+        e.stopPropagation();
+        planned.delete(k); bought.delete(k);
+        render();
+      };
+      li.onclick = () => {
+        if (bought.has(k)) bought.delete(k); else bought.add(k);
+        render();
+      };
+      li.appendChild(removeBtn);
+      ul.appendChild(li);
+    });
+    block.appendChild(ul);
+  });
+
+  if (plannedExtras.size > 0) {
+    const heading = document.createElement('div');
+    heading.className = 'store-heading';
+    heading.textContent = 'Other (not in your usual aisles)';
+    block.appendChild(heading);
+
+    const ul = document.createElement('ul');
+    ul.className = 'items';
+    [...plannedExtras].forEach(item => {
+      const isDone = boughtExtras.has(item);
+      const li = document.createElement('li');
+      li.className = 'item' + (isDone ? ' done' : '');
+      li.innerHTML = `<span class="checkbox">${checkSvg}</span><span class="item-label">${item}</span>`;
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-x';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.onclick = (e) => {
+        e.stopPropagation();
+        plannedExtras.delete(item); boughtExtras.delete(item);
+        render();
+      };
+      li.onclick = () => {
+        if (boughtExtras.has(item)) boughtExtras.delete(item); else boughtExtras.add(item);
+        render();
+      };
+      li.appendChild(removeBtn);
+      ul.appendChild(li);
+    });
+    block.appendChild(ul);
+  }
+
+  return block;
+}
+
+// ---------- RENDER: RECIPES ----------
+function renderRecipes(){
+  const block = document.createElement('div');
+  block.className = 'store-block active';
+  recipes.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'recipe-card';
+
+    const allOnList = r.ingredients.every(ing => {
+      const match = itemIndex[ing.toLowerCase()];
+      return match ? planned.has(key(match.storeKey, match.item)) : plannedExtras.has(ing);
+    });
+
+    const pills = r.ingredients.map(ing => {
+      const match = itemIndex[ing.toLowerCase()];
+      const isOn = match ? planned.has(key(match.storeKey, match.item)) : plannedExtras.has(ing);
+      return `<span class="ing-pill${isOn ? ' on-list' : ''}">${ing}</span>`;
+    }).join('');
+
+    card.innerHTML = `
+      <h2>${r.name}</h2>
+      <div class="recipe-meta">${r.tag} · ${r.ingredients.length} ingredients</div>
+      <div class="recipe-ingredients">${pills}</div>
+    `;
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-all-btn' + (allOnList ? ' added' : '');
+    addBtn.textContent = allOnList ? 'All on your list' : 'Add ingredients to list';
+    addBtn.onclick = () => {
+      r.ingredients.forEach(ing => {
+        const match = itemIndex[ing.toLowerCase()];
+        if (match) planned.add(key(match.storeKey, match.item));
+        else plannedExtras.add(ing);
+      });
+      render();
+    };
+    card.appendChild(addBtn);
+    block.appendChild(card);
+  });
+  return block;
+}
+
+// ---------- MAIN RENDER ----------
+function render(){
+  renderTabs();
+  const storesEl = document.getElementById('stores');
+  storesEl.innerHTML = '';
+
+  if (activeTab === 'mylist') {
+    storesEl.appendChild(renderMyList());
+  } else if (activeTab === 'recipes') {
+    storesEl.appendChild(renderRecipes());
+  } else {
+    const store = stores.find(s => s.key === activeTab);
+    storesEl.appendChild(renderBrowseStore(store));
+  }
+
+  const total = plannedTotalCount();
+  const done = boughtTotalCount();
+  document.getElementById('progress-count').textContent = `${done}/${total}`;
+  document.getElementById('progress-fill').style.width = total ? `${(done/total)*100}%` : '0%';
+}
+
+document.getElementById('reset-all').onclick = () => {
+  planned.clear(); plannedExtras.clear(); bought.clear(); boughtExtras.clear();
+  activeTab = 'mylist';
+  render();
+};
+
+document.getElementById('today-label').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+
+render();
+</script>
+</body>
+</html>
