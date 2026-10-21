@@ -602,10 +602,15 @@ function renderMyList(){
   clearBtn.className = 'clear-list-btn';
   clearBtn.textContent = 'Clear list';
   clearBtn.onclick = () => {
+    if (!confirm('Clear your whole list?')) return;
     planned.clear(); plannedExtras.clear(); bought.clear(); boughtExtras.clear();
     render();
   };
-  headerRow.appendChild(document.createElement('span'));
+  const untickBtn = document.createElement('button');
+  untickBtn.className = 'clear-list-btn';
+  untickBtn.textContent = 'Untick all';
+  untickBtn.onclick = () => { bought.clear(); boughtExtras.clear(); render(); };
+  headerRow.appendChild(boughtTotalCount() ? untickBtn : document.createElement('span'));
   headerRow.appendChild(clearBtn);
   block.appendChild(headerRow);
 
@@ -745,9 +750,33 @@ function render(){
   const done = boughtTotalCount();
   document.getElementById('progress-count').textContent = `${done}/${total}`;
   document.getElementById('progress-fill').style.width = total ? `${(done/total)*100}%` : '0%';
+  saveState();
+}
+
+// ---------- SAVE / LOAD (keeps your list on this phone) ----------
+const STORE_KEY = 'grocery-run-v1';
+function saveState(){
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      planned:[...planned], plannedExtras:[...plannedExtras],
+      bought:[...bought], boughtExtras:[...boughtExtras], activeTab
+    }));
+  } catch(e){}
+}
+function loadState(){
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    if (!d) return;
+    (d.planned||[]).forEach(k => planned.add(k));
+    (d.plannedExtras||[]).forEach(k => plannedExtras.add(k));
+    (d.bought||[]).forEach(k => bought.add(k));
+    (d.boughtExtras||[]).forEach(k => boughtExtras.add(k));
+    if (d.activeTab && (d.activeTab === 'mylist' || d.activeTab === 'recipes' || stores.some(s => s.key === d.activeTab))) activeTab = d.activeTab;
+  } catch(e){}
 }
 
 document.getElementById('reset-all').onclick = () => {
+  if (!confirm('Clear everything and start over?')) return;
   planned.clear(); plannedExtras.clear(); bought.clear(); boughtExtras.clear();
   activeTab = 'mylist';
   render();
@@ -755,6 +784,7 @@ document.getElementById('reset-all').onclick = () => {
 
 document.getElementById('today-label').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
+loadState();
 render();
 </script>
 </body>
